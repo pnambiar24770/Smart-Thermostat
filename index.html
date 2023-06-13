@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+
+<body>
+
+
+      <script src="https://code.highcharts.com/highcharts.js"></script> 
+      <script src="https://code.highcharts.com/highcharts-more.js"></script> 
+      <script src="https://code.highcharts.com/modules/solid-gauge.src.js"></script> 
+
+    <div class="container">
+        <h1>Dashboard</h1>
+
+
+        <div class="panel panel-info">
+            <div class="panel-heading">
+                <h3 class="panel-title"><strong></strong></h3>
+            </div>
+            <div class="panel-body">
+                <div id="container1"></div>
+            </div>
+        </div>
+
+
+       
+
+        <div class="panel panel-info">
+            <div class="panel-heading">
+                <h3 class="panel-title"><strong>Current Temp/Humidity:</strong></h3>
+            </div>
+            <div class="panel-body">
+                <div id="container2"></div>
+                <div id="container3"></div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        var x = new XMLHttpRequest();
+        x.open("GET", "bucket-name", true);
+        // x.setRequestHeader("Content-Type", "application/xml");
+        x.onreadystatechange = function () {
+            if (x.readyState == 4 && x.status == 200) {
+                let promiseArr = [];
+                let data = [];
+                var doc = x.responseXML;
+                let keys = doc.getElementsByTagName("Key");
+
+                let index = 0;
+                createDataSet(index);
+
+                function createDataSet(index) {
+                    if (index >= keys.length) {
+                        generateGraph();
+                        return false;
+                    }
+                    let element = keys[index];
+                    element = element.textContent;
+
+
+                    let splitName = element.split('/');
+                    if (splitName[1] !== '') {
+                        promiseArr.push(new Promise((resolve, reject) => {
+                            var innerReq = new XMLHttpRequest();
+                            innerReq.open("GET", "bucket-name" + splitName[0] + "/" + splitName[1], true);
+                            // innerReq.setRequestHeader("Content-Type", "application/xml");
+                            innerReq.onreadystatechange = function () {
+                                if (innerReq.readyState == 4 && innerReq.status == 200) {
+                                    let parseData = JSON.parse(innerReq.responseText);
+                                    if (parseData.humidity) {
+                                        data.push(Object.assign({}, parseData, { timestamp: splitName[1] }));
+                                    }
+                                    resolve('Done')
+                                    index++;
+                                    createDataSet(index);
+                                } else {
+                                    // reject(innerReq)
+                                }
+                            }
+                            innerReq.send(null);
+                        }));
+                    } else {
+                        index++;
+                        createDataSet(index);
+                    }
+                }
+
+
+
+
+                function generateGraph() {
+                 const date = new Date();
+                    Promise.all(promiseArr.map(p => p.catch(e => e)))
+                        .then(res => {
+
+                            abcData = data;
+                            let barGraphXaxisName = ['Humidity', 'Temperature', 'CO2', 'Uptime'];
+                            let humiditySum = 0, temperatureSum = 0, co2Sum=0, uptimeSum = 0;
+                            let lineXaxisData = [], humArr = [], tempArr = [], co2Arr = [], upArr = [];
+                            for (let i = 0; i < abcData.length; i++) {
+                                humiditySum += Number(abcData[i].humidity);
+                                temperatureSum += Number(abcData[i].temperature);
+                                co2Sum += Number(abcData[i].co2);
+                                uptimeSum += Number(abcData[i].uptime);
+
+                                humArr.push(Number(abcData[i].humidity));
+                                tempArr.push(Number(abcData[i].temperature));
+                                co2Arr.push(Number(abcData[i].co2))
+                                upArr.push(abcData[i].uptime);
+                                // lineXaxisData.push(new Date(Number(abcData[i].timestamp)).toLocaleString());
+                            }
+							
+                            
+                            Highcharts.chart('container1', {
+
+                                title: {
+                                    text: date
+                                },
+
+                                yAxis: {
+                                    title: {
+                                        text: 'Value'
+                                    }
+                                },
+
+                                xAxis: {
+                                    categories: upArr
+                                },
+
+                                legend: {
+                                    layout: 'vertical',
+                                    align: 'right',
+                                    verticalAlign: 'middle'
+                                },
+
+                                plotOptions: {
+                                    series: {
+                                        label: {
+                                            connectorAllowed: false
+                                        }
+                                    }
+                                },
+                                series: [{
+                                    name: 'Humdity',
+                                    data: humArr
+                                }, {
+                                    name: 'Temperature',
+                                    data: tempArr
+                                },{
+                                    name: 'CO2',
+                                    data: co2Arr
+                                }],
+
+                                responsive: {
+                                    rules: [{
+                                        condition: {
+                                            maxWidth: 500
+                                        },
+                                        chartOptions: {
+                                            legend: {
+                                                layout: 'horizontal',
+                                                align: 'center',
+                                                verticalAlign: 'bottom'
+                                            }
+                                        }
+                                    }]
+                                }
+
+                            });
+
+                         
+var gaugeOptions = {
+    chart: {
+        type: 'solidgauge'
+    },
+
+    title: null,
+
+    pane: {
+        center: ['50%', '85%'],
+        size: '140%',
+        startAngle: -90,
+        endAngle: 90,
+        background: {
+            backgroundColor:
+                Highcharts.defaultOptions.legend.backgroundColor || '#EEE',
+            innerRadius: '60%',
+            outerRadius: '100%',
+            shape: 'arc'
+        }
+    },
+
+    exporting: {
+        enabled: false
+    },
+
+    tooltip: {
+        enabled: false
+    },
+
+    // the value axis
+    yAxis: {
+        stops: [
+            [0.1, '#55BF3B'], // green
+            [0.5, '#DDDF0D'], // yellow
+            [0.9, '#DF5353'] // red
+        ],
+        lineWidth: 0,
+        tickWidth: 0,
+        minorTickInterval: null,
+        tickAmount: 2,
+        title: {
+            y: -70
+        },
+        labels: {
+            y: 16
+        }
+    },
+
+    plotOptions: {
+        solidgauge: {
+            dataLabels: {
+                y: 5,
+                borderWidth: 0,
+                useHTML: true
+            }
+        }
+    }
+};
+
+// The temp gauge
+var chartTemp = Highcharts.chart('container2', Highcharts.merge(gaugeOptions, {
+    yAxis: {
+        min: -40,
+        max: 50,
+        title: {
+            text: 'Temperature'
+        }
+    },
+
+    credits: {
+        enabled: false
+    },
+
+    series: [{
+        name: 'Temperature',
+        data: [tempArr[tempArr.length-1]],
+        dataLabels: {
+            format:
+                '<div style="text-align:center">' +
+                '<span style="font-size:25px">{y}</span><br/>' +
+                '<span style="font-size:12px;opacity:0.4">C</span>' +
+                '</div>'
+        },
+        tooltip: {
+            valueSuffix: ' C'
+        }
+    }]
+
+}));
+
+// The humidity gauge
+var chartHumidity = Highcharts.chart('container3', Highcharts.merge(gaugeOptions, {
+    yAxis: {
+        min: 0,
+        max: 100,
+        title: {
+            text: 'Humidity'
+        }
+    },
+
+    series: [{
+        name: 'Humidity',
+        data: [humArr[humArr.length-1]],
+        dataLabels: {
+            format:
+                '<div style="text-align:center">' +
+                '<span style="font-size:25px">{y:.1f}</span><br/>' +
+                '<span style="font-size:12px;opacity:0.4">' +
+                '%' +
+                '</span>' +
+                '</div>'
+        },
+        tooltip: {
+            valueSuffix: ' %'
+        }
+    }]
+
+}));
+    
+
+                        }).catch(err => {
+                            console.log('err', err)
+                        })
+                }
+
+            }
+        };
+        x.send(null);
+
+    </script>
+</body>
+
+</html>
