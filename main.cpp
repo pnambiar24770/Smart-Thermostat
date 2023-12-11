@@ -12,8 +12,8 @@
 
 
 #define SENSOR 32
-#define AWS_IOT_PUBLISH_TOPIC   "esp32/pub"
-#define AWS_IOT_SUBSCRIBE_TOPIC "esp32/sub"
+#define AWS_IOT_PUBLISH_TOPIC   "esp32/pub" //change this
+#define AWS_IOT_SUBSCRIBE_TOPIC "esp32/sub" //change this
  
 #define SECRET
 #define THINGNAME "smart_temp_monitor"                         //change this
