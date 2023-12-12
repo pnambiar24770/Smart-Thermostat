@@ -9,3 +9,7 @@ Smart Thermostat using Arduino and AWS
 5. Add Wi-Fi information (User,Password)
 6. Add S3 bucket url to HTML/JavaScript Code
 7. Turn on sensor
+
+# Files
+main.cpp: code for ESP32
+index.html: code to be dropped in S3 Bucket
